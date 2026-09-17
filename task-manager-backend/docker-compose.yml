@@ -1,0 +1,71 @@
+# 📌 RÔLE : Orchestration Docker pour le backend + MySQL.
+# 📌 POINTS CLÉS :
+#   - MySQL dans un conteneur (isolé de ton MySQL local)
+#   - Backend dans un conteneur
+#   - Healthcheck : le backend attend que MySQL soit prêt
+#   - Réseau dédié pour la communication inter-conteneurs
+# 📌 QUESTION POSSIBLE : "Pourquoi pas le MySQL local ?"
+#     → En prod, on veut un environnement isolé et reproductible
+
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: taskmanager-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-taskmanager}
+      MYSQL_USER: ${MYSQL_USER:-taskmanager}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-taskmanager}
+    ports:
+      - "3307:3306"  # ⚠️ 3307 pour ne pas conflicter avec ton MySQL local (3306)
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER:-taskmanager}", "-p${MYSQL_PASSWORD:-taskmanager}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taskmanager-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskmanager-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/taskmanager?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: ${MYSQL_USER:-taskmanager}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-taskmanager}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      DDL_AUTO: update
+      SHOW_SQL: "false"  # Moins de logs en conteneur
+    ports:
+      - "8080:8080"
+    networks:
+      - taskmanager-net
+  frontend:                          
+    build:
+      context: ../task-manager-frontend
+      dockerfile: Dockerfile
+    container_name: taskmanager-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - taskmanager-net
+
+volumes:
+  mysql-data:
+
+networks:
+  taskmanager-net:
+    driver: bridge

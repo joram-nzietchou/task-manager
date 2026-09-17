@@ -1,0 +1,19 @@
+services:
+  mysql:
+    # ... (existant, ne touche pas)
+
+  backend:
+    # ... (existant, ne touche pas)
+
+  frontend:                          # 🆕 AJOUT
+    build:
+      context: ../task-manager-frontend
+      dockerfile: Dockerfile
+    container_name: taskmanager-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - taskmanager-net

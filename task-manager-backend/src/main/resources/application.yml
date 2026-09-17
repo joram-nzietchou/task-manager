@@ -1,0 +1,40 @@
+# 📌 RÔLE : Configuration principale de l'application Spring Boot
+# 📌 POINTS CLÉS :
+#   - Connexion à MySQL local (localhost:3306)
+#   - Utilisateur dédié "taskmanager"
+#   - Hibernate détecte automatiquement le dialect MySQL (pas besoin de le préciser)
+#   - open-in-view désactivé (bonne pratique : évite les requêtes BDD pendant la sérialisation)
+
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: task-manager-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/taskmanager?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:taskmanager}
+    password: ${DB_PASSWORD:taskmanager}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:update}
+    show-sql: ${SHOW_SQL:true}
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  jackson:
+    default-property-inclusion: non_null
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
