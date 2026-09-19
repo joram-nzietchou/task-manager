@@ -1,0 +1,29 @@
+# ============================================================
+# Dockerfile pour déploiement sur Render
+# ============================================================
+
+# ---- Étape 1 : Build ----
+FROM eclipse-temurin:17-jdk AS build
+WORKDIR /workspace
+
+# Copie tout le projet
+COPY . .
+
+# Compile le JAR (skip les tests pour accélérer le build)
+RUN chmod +x mvnw && ./mvnw clean package -DskipTests
+
+# ---- Étape 2 : Runtime ----
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+
+# Utilisateur non-root (sécurité)
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+# Copie le JAR depuis l'étape de build
+COPY --from=build /workspace/target/*.jar app.jar
+
+# Render utilise la variable PORT (par défaut 10000, mais 8080 fonctionne)
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
